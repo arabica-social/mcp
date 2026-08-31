@@ -1,0 +1,43 @@
+{
+  "lexicon": 1,
+  "id": "social.arabica.alpha.roaster",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "description": "A coffee roaster company",
+      "record": {
+        "type": "object",
+        "required": ["name", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Name of the roaster (e.g., 'Black & White', 'Red Rooster')"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Location of the roaster (e.g., 'Raleigh, NC', 'Floyd, VA')"
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500,
+            "description": "Roaster's website URL"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Timestamp when the roaster record was created"
+          },
+          "sourceRef": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT-URI of the record this entity was sourced from"
+          }
+        }
+      }
+    }
+  }
+}

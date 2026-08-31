@@ -1,0 +1,171 @@
+{
+  "lexicon": 1,
+  "id": "social.arabica.alpha.brew",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "description": "A coffee brewing session with parameters and notes",
+      "record": {
+        "type": "object",
+        "required": ["beanRef", "createdAt"],
+        "properties": {
+          "beanRef": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT-URI reference to the bean record used"
+          },
+          "coffeeAmount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Amount of coffee used in grams"
+          },
+          "method": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Brewing method (e.g., 'Pour Over', 'French Press', 'Espresso')"
+          },
+          "temperature": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2120,
+            "description": "Water temperature in tenths of a degree Celsius or Fahrenheit (e.g., 935 = 93.5°C)"
+          },
+          "waterAmount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Amount of water used in grams or milliliters"
+          },
+          "timeSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total brew time in seconds"
+          },
+          "grindSize": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Grind size setting (can be numeric like '18' or descriptive like 'Medium')"
+          },
+          "grinderRef": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT-URI reference to the grinder used"
+          },
+          "brewerRef": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT-URI reference to the brewer/device used"
+          },
+          "recipeRef": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "AT-URI reference to the recipe used for this brew"
+          },
+          "tastingNotes": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Tasting notes and observations about the brew"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Rating of the brew from 1 to 10"
+          },
+          "pours": {
+            "type": "array",
+            "description": "Array of pour information for multi-pour methods (e.g., V60)",
+            "items": {
+              "type": "ref",
+              "ref": "#pour"
+            }
+          },
+          "espressoParams": {
+            "type": "ref",
+            "ref": "#espressoParams",
+            "description": "Espresso-specific brewing parameters (optional)"
+          },
+          "pouroverParams": {
+            "type": "ref",
+            "ref": "#pouroverParams",
+            "description": "Pour-over-specific brewing parameters (optional)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime",
+            "description": "Timestamp when the brew was made"
+          }
+        }
+      }
+    },
+    "pour": {
+      "type": "object",
+      "description": "Information about a single pour in a multi-pour brewing method",
+      "required": ["waterAmount", "timeSeconds"],
+      "properties": {
+        "waterAmount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Amount of water in this pour (grams or ml)"
+        },
+        "timeSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Time of this pour relative to brew start (seconds)"
+        }
+      }
+    },
+    "espressoParams": {
+      "type": "object",
+      "description": "Parameters specific to espresso brewing",
+      "properties": {
+        "yieldWeight": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Espresso yield/output weight in tenths of a gram (e.g., 360 = 36.0g)"
+        },
+        "pressure": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Brewing pressure in tenths of a bar (e.g., 90 = 9.0 bar)"
+        },
+        "preInfusionSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Pre-infusion time in seconds"
+        }
+      }
+    },
+    "pouroverParams": {
+      "type": "object",
+      "description": "Parameters specific to pour-over brewing",
+      "properties": {
+        "bloomWater": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Water used for bloom in grams"
+        },
+        "bloomSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Bloom wait time in seconds"
+        },
+        "drawdownSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Drawdown time in seconds (time after last pour until bed is dry)"
+        },
+        "bypassWater": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Bypass water added after brewing in grams"
+        },
+        "filter": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Type of filter used (e.g. paper, metal, cloth)"
+        }
+      }
+    }
+  }
+}
