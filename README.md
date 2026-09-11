@@ -5,7 +5,7 @@
 ## Install and Configure
 
 ```sh
-npm install -g @arabica/mcp
+npm install -g @arabica-social/mcp
 arabica-mcp login your-handle.example.com
 ```
 
