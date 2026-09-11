@@ -38,6 +38,66 @@ async function session(deps: Deps) {
   }
 }
 
+type BrewRecipeDefaults = Pick<
+  BrewInput,
+  "coffeeAmount" | "waterAmount" | "pours" | "brewerRef"
+>;
+
+async function resolveRecipeDefaults(
+  recipeValue: string,
+  s: Awaited<ReturnType<AuthProvider["getSession"]>>,
+  deps: Deps,
+  signal?: AbortSignal,
+): Promise<BrewRecipeDefaults> {
+  let recipeRef;
+  try {
+    recipeRef = ownedRecordUri(
+      recipeValue,
+      s.did,
+      RECIPE_COLLECTION,
+      "recipeRef",
+      "recipe",
+    );
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Invalid recipe reference";
+    throw new ToolFailure(
+      message.includes("not owned") ? "record_not_owned" : "invalid_input",
+      message,
+    );
+  }
+  let recipe;
+  try {
+    recipe = await deps
+      .pds(s)
+      .getRecord(RECIPE_COLLECTION, recipeRef.rkey, signal);
+  } catch (e: any) {
+    if (e?.kind === "not_found")
+      throw new ToolFailure(
+        "record_not_found",
+        "The selected recipe record was not found.",
+      );
+    throw mapError(e);
+  }
+  const checked = safeParse(SocialArabicaAlphaRecipe.mainSchema, recipe.value);
+  if (!checked.ok)
+    throw new ToolFailure(
+      "invalid_record",
+      "The selected recipe record is malformed.",
+    );
+  return {
+    coffeeAmount:
+      checked.value.coffeeAmount && checked.value.coffeeAmount > 0
+        ? Math.round(checked.value.coffeeAmount / 10)
+        : undefined,
+    waterAmount:
+      checked.value.waterAmount && checked.value.waterAmount > 0
+        ? Math.round(checked.value.waterAmount / 10)
+        : undefined,
+    pours: checked.value.pours?.map((pour) => ({ ...pour })),
+    brewerRef: checked.value.brewerRef,
+  };
+}
+
 export async function listBeans(
   input: {
     query?: string;
@@ -188,58 +248,13 @@ export async function logBrew(
       "The selected bean has no roaster. Ask the user which roaster applies, list roasters if needed, attach it with arabica_edit_bean, then retry this brew.",
     );
   let brewInput = input;
-  if (input.recipeRef) {
-    let recipeRef;
-    try {
-      recipeRef = ownedRecordUri(
-        input.recipeRef,
-        s.did,
-        RECIPE_COLLECTION,
-        "recipeRef",
-        "recipe",
-      );
-    } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Invalid recipe reference";
-      throw new ToolFailure(
-        message.includes("not owned") ? "record_not_owned" : "invalid_input",
-        message,
-      );
-    }
-    let recipe;
-    try {
-      recipe = await deps
-        .pds(s)
-        .getRecord(RECIPE_COLLECTION, recipeRef.rkey, signal);
-    } catch (e: any) {
-      if (e?.kind === "not_found")
-        throw new ToolFailure(
-          "record_not_found",
-          "The selected recipe record was not found.",
-        );
-      throw mapError(e);
-    }
-    const checked = safeParse(
-      SocialArabicaAlphaRecipe.mainSchema,
-      recipe.value,
+  if (input.recipeRef !== undefined && input.recipeRef !== null) {
+    const defaults = await resolveRecipeDefaults(
+      input.recipeRef,
+      s,
+      deps,
+      signal,
     );
-    if (!checked.ok)
-      throw new ToolFailure(
-        "invalid_record",
-        "The selected recipe record is malformed.",
-      );
-    const defaults: Partial<BrewInput> = {
-      coffeeAmount:
-        checked.value.coffeeAmount && checked.value.coffeeAmount > 0
-          ? Math.round(checked.value.coffeeAmount / 10)
-          : undefined,
-      waterAmount:
-        checked.value.waterAmount && checked.value.waterAmount > 0
-          ? Math.round(checked.value.waterAmount / 10)
-          : undefined,
-      pours: checked.value.pours?.map((pour) => ({ ...pour })),
-      brewerRef: checked.value.brewerRef,
-    };
     brewInput = {
       ...input,
       coffeeAmount:
@@ -318,10 +333,34 @@ export async function editBrew(
       "At least one brew field must be supplied to edit.",
     );
   const currentRecord = current.value as Record<string, unknown>;
+  const rebaseRecipe =
+    input.recipeRef !== undefined && input.recipeRef !== null;
+  let recipeDefaults: BrewRecipeDefaults | undefined;
+  if (rebaseRecipe)
+    recipeDefaults = await resolveRecipeDefaults(
+      input.recipeRef as string,
+      s,
+      deps,
+      signal,
+    );
   const conversionInput: Record<string, unknown> = {
     ...input,
     beanUri: String(currentRecord.beanRef),
   };
+  if (recipeDefaults) {
+    for (const key of [
+      "coffeeAmount",
+      "waterAmount",
+      "pours",
+      "brewerRef",
+    ] as const) {
+      if (
+        !Object.prototype.hasOwnProperty.call(input, key) &&
+        recipeDefaults[key] !== undefined
+      )
+        conversionInput[key] = recipeDefaults[key];
+    }
+  }
   const patchInput = conversionInput as unknown as BrewInput;
   let converted;
   try {
@@ -339,18 +378,29 @@ export async function editBrew(
     ["timeSeconds", "timeSeconds"],
     ["grindSize", "grindSize"],
     ["grinderRef", "grinderRef"],
+    ["brewerRef", "brewerRef"],
+    ["recipeRef", "recipeRef"],
     ["tastingNotes", "tastingNotes"],
     ["rating", "rating"],
     ["pours", "pours"],
     ["espresso", "espressoParams"],
     ["pourover", "pouroverParams"],
   ];
+  const recipeFields = new Set<keyof BrewInput>([
+    "coffeeAmount",
+    "waterAmount",
+    "pours",
+    "brewerRef",
+  ]);
   for (const [inputKey, recordKey] of fields) {
-    if (Object.prototype.hasOwnProperty.call(input, inputKey)) {
-      const raw = (input as Record<string, unknown>)[inputKey];
+    const supplied = Object.prototype.hasOwnProperty.call(input, inputKey);
+    if (supplied || (rebaseRecipe && recipeFields.has(inputKey))) {
+      const raw = supplied
+        ? (input as Record<string, unknown>)[inputKey]
+        : recipeDefaults?.[inputKey as keyof BrewRecipeDefaults];
       // null clears an optional field (delete semantics); toBrewRecord omits
       // nulls, so copy the value only for real updates.
-      if (raw === null) delete next[recordKey];
+      if (raw === null || raw === undefined) delete next[recordKey];
       else next[recordKey] = (converted as Record<string, unknown>)[recordKey];
     }
   }

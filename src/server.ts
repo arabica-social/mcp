@@ -298,7 +298,7 @@ export function createServer(deps: Deps) {
     {
       title: "Edit Arabica brew",
       description:
-        "Update an existing brew at its exact AT-URI. This uses putRecord and never creates a new record. Supply only fields to change; pass null to clear any optional field (method, temperature, waterAmount, coffeeAmount, timeSeconds, grindSize, grinderRef, tastingNotes, rating, pours, espresso, pourover). createdAt can be updated but not cleared; beanRef cannot be changed. Use tastingNotes for free-form description or notes; brews do not have a separate description field. grinderRef is the grinder record URI, while grindSize is the separate grind setting; ask for grindSize if it was not provided. A record that fails lexicon validation can be repaired here: supply corrected fields; the merged record must validate.",
+        "Update an existing brew at its exact AT-URI. This uses putRecord and never creates a new record. Pass recipeRef to rebase the brew on an exact recipe AT-URI owned by the authenticated user: its dose, water, pours, and brewer replace the current recipe-backed fields, while explicitly supplied brew fields override those defaults. The recipe reference is stored on the brew. Supply only fields to change; pass null to clear any optional field (method, temperature, waterAmount, coffeeAmount, timeSeconds, grindSize, grinderRef, brewerRef, recipeRef, tastingNotes, rating, pours, espresso, pourover). Passing recipeRef: null clears only the recipe reference, and omitting recipeRef preserves the current recipe-backed fields. createdAt can be updated but not cleared; beanRef cannot be changed. Use tastingNotes for free-form description or notes; brews do not have a separate description field. grinderRef is the grinder record URI, while grindSize is the separate grind setting; ask for grindSize if it was not provided. A record that fails lexicon validation can be repaired here: supply corrected fields; the merged record must validate.",
       inputSchema: {
         requestId,
         brewUri: z.string(),
@@ -310,6 +310,8 @@ export function createServer(deps: Deps) {
         timeSeconds: finite.min(0).nullable().optional(),
         grindSize: editableText(50),
         grinderRef: editableText(500),
+        brewerRef: catalogUri,
+        recipeRef: catalogUri,
         tastingNotes: editableText(2000),
         rating: z.number().int().min(1).max(10).nullable().optional(),
         pours: z

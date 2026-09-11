@@ -266,6 +266,101 @@ describe("brew roaster interaction", () => {
 });
 
 describe("editBrew clears optional params", () => {
+  it("rebases recipe defaults, allows overrides, and clears references", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "arabica-test-"));
+    const brewURI = `at://${DID}/${BREW_COLLECTION}/3jzfcijpj2z2a`;
+    const recipeURI = `at://${DID}/${RECIPE_COLLECTION}/3jzfcijpj2z2b`;
+    const brewerURI = `at://${DID}/social.arabica.alpha.brewer/3jzfcijpj2z2c`;
+    const currentBrew = {
+      $type: BREW_COLLECTION,
+      beanRef: URI,
+      recipeRef: `at://${DID}/${RECIPE_COLLECTION}/3jzfcijpj2z2d`,
+      brewerRef: `at://${DID}/social.arabica.alpha.brewer/3jzfcijpj2z2e`,
+      coffeeAmount: 12,
+      waterAmount: 200,
+      pours: [{ waterAmount: 200, timeSeconds: 120 }],
+      createdAt: new Date().toISOString(),
+    };
+    const writes: unknown[] = [];
+    const deps: Deps = {
+      auth: {
+        getSession: async () => ({
+          did: DID,
+          fetchHandler: async () => new Response(),
+        }),
+      },
+      pds: () => ({
+        did: DID,
+        listRecords: async () => ({ records: [] }),
+        getRecord: async (collection: string) => ({
+          uri: collection === BREW_COLLECTION ? brewURI : recipeURI,
+          cid: CID,
+          rkey: "3jzfcijpj2z2a",
+          value:
+            collection === BREW_COLLECTION
+              ? currentBrew
+              : {
+                  $type: RECIPE_COLLECTION,
+                  name: "V60",
+                  brewerRef: brewerURI,
+                  coffeeAmount: 185,
+                  waterAmount: 3000,
+                  pours: [{ waterAmount: 300, timeSeconds: 180 }],
+                  createdAt: new Date().toISOString(),
+                },
+        }),
+        createRecord: async () => {
+          throw new Error("unexpected");
+        },
+        putRecord: async (_c: string, _r: string, record: unknown) => {
+          writes.push(record);
+          return {
+            uri: brewURI,
+            cid: CID,
+            rkey: "3jzfcijpj2z2a",
+            value: record,
+          };
+        },
+      }),
+      idem: new IdempotencyStore(join(dir, "idempotency.sqlite")),
+      clientId: "test",
+    };
+
+    await editBrew(
+      {
+        requestId: "rebase",
+        brewUri: brewURI,
+        recipeRef: recipeURI,
+        coffeeAmount: 20,
+      },
+      deps,
+    );
+    expect(writes[0]).toMatchObject({
+      recipeRef: recipeURI,
+      brewerRef: brewerURI,
+      coffeeAmount: 20,
+      waterAmount: 300,
+      pours: [{ waterAmount: 300, timeSeconds: 180 }],
+    });
+
+    await editBrew(
+      {
+        requestId: "clear",
+        brewUri: brewURI,
+        recipeRef: null,
+        brewerRef: null,
+      },
+      deps,
+    );
+    expect(writes[1]).toMatchObject({
+      coffeeAmount: 12,
+      waterAmount: 200,
+      pours: [{ waterAmount: 200, timeSeconds: 120 }],
+    });
+    expect(writes[1]).not.toHaveProperty("recipeRef");
+    expect(writes[1]).not.toHaveProperty("brewerRef");
+  });
+
   it("removes espresso and pourover params when null is passed", async () => {
     const dir = await mkdtemp(join(tmpdir(), "arabica-test-"));
     const BREW_URI = `at://${DID}/${BREW_COLLECTION}/3jzfcijpj2z2a`;

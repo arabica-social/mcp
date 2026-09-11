@@ -191,8 +191,18 @@ describe("bean and brew input schemas match the record converters", () => {
       requestId: "r",
       brewUri: BEAN_URI,
       temperature: 93.5,
+      brewerRef: ROASTER_URI,
+      recipeRef: ROASTER_URI,
     });
     expect(partial.success).toBe(true);
+    expect(
+      schema.safeParse({
+        requestId: "r",
+        brewUri: BEAN_URI,
+        brewerRef: null,
+        recipeRef: null,
+      }).success,
+    ).toBe(true);
   });
 
   it("enforces a non-empty name up to 200 chars in arabica_add_bean", () => {
