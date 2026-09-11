@@ -239,7 +239,7 @@ export function createServer(deps: Deps) {
     {
       title: "Log Arabica brew",
       description:
-        "Create one brew for an exact bean AT-URI owned by the authenticated user. Use tastingNotes for free-form description or notes; brews do not have a separate description field.",
+        "Create one brew for an exact bean AT-URI owned by the authenticated user. Pass recipeRef to base the brew on an exact recipe AT-URI owned by the authenticated user: its dose, water, pours, and brewer are copied into the brew, while explicitly supplied brew fields override those defaults. The recipe reference is also stored on the brew. Use tastingNotes for free-form description or notes; brews do not have a separate description field.",
       inputSchema: {
         requestId,
         beanUri: z.string(),
@@ -251,6 +251,8 @@ export function createServer(deps: Deps) {
         timeSeconds: finite.min(0).optional(),
         grindSize: optionalText(50),
         grinderRef: optionalText(500),
+        brewerRef: optionalText(500),
+        recipeRef: optionalText(500),
         tastingNotes: optionalText(2000),
         rating: z.number().int().min(1).max(10).optional(),
         pours: z

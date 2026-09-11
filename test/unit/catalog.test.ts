@@ -13,7 +13,10 @@ import {
   SocialArabicaAlphaRoaster,
 } from "../../src/generated/lexicons.js";
 import { IdempotencyStore } from "../../src/state/idempotency.js";
-import { BREW_COLLECTION } from "../../src/generated/lexicons.js";
+import {
+  BREW_COLLECTION,
+  RECIPE_COLLECTION,
+} from "../../src/generated/lexicons.js";
 import { editBrew, logBrew, type Deps } from "../../src/tools/operations.js";
 import { ToolFailure } from "../../src/tools/errors.js";
 
@@ -183,6 +186,82 @@ describe("brew roaster interaction", () => {
       logBrew({ requestId: "r", beanUri: URI }, deps),
     ).rejects.toMatchObject({ code: "roaster_required" });
     expect(calls).toHaveLength(1);
+  });
+
+  it("copies recipe defaults into a brew and keeps explicit overrides", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "arabica-test-"));
+    const recipeURI = `at://${DID}/${RECIPE_COLLECTION}/3jzfcijpj2z2b`;
+    const brewerURI = `at://${DID}/social.arabica.alpha.brewer/3jzfcijpj2z2c`;
+    let written: any;
+    const deps: Deps = {
+      auth: {
+        getSession: async () => ({
+          did: DID,
+          fetchHandler: async () => new Response(),
+        }),
+      },
+      pds: () => ({
+        did: DID,
+        listRecords: async () => ({ records: [] }),
+        getRecord: async (collection: string) => {
+          if (collection === BREW_COLLECTION) throw { kind: "not_found" };
+          return {
+            uri: collection === RECIPE_COLLECTION ? recipeURI : URI,
+            cid: CID,
+            rkey: "3jzfcijpj2z2a",
+            value:
+              collection === RECIPE_COLLECTION
+                ? {
+                    $type: RECIPE_COLLECTION,
+                    name: "V60",
+                    brewerRef: brewerURI,
+                    coffeeAmount: 185,
+                    waterAmount: 3000,
+                    pours: [{ waterAmount: 300, timeSeconds: 180 }],
+                    createdAt: new Date().toISOString(),
+                  }
+                : {
+                    $type: "social.arabica.alpha.bean",
+                    name: "Bean",
+                    roasterRef: `at://${DID}/social.arabica.alpha.roaster/3jzfcijpj2z2d`,
+                    createdAt: new Date().toISOString(),
+                  },
+          };
+        },
+        createRecord: async (_collection, rkey, record) => {
+          written = record;
+          return {
+            uri: `at://${DID}/${BREW_COLLECTION}/${rkey}`,
+            rkey,
+            value: record,
+          };
+        },
+        putRecord: async () => {
+          throw new Error("unexpected");
+        },
+      }),
+      idem: new IdempotencyStore(join(dir, "idempotency.sqlite")),
+      clientId: "test",
+    };
+
+    await logBrew(
+      {
+        requestId: "r",
+        beanUri: URI,
+        recipeRef: recipeURI,
+        coffeeAmount: 20,
+      },
+      deps,
+    );
+
+    expect(written).toMatchObject({
+      beanRef: URI,
+      recipeRef: recipeURI,
+      brewerRef: brewerURI,
+      coffeeAmount: 20,
+      waterAmount: 300,
+      pours: [{ waterAmount: 300, timeSeconds: 180 }],
+    });
   });
 });
 

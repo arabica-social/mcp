@@ -175,6 +175,8 @@ describe("bean and brew input schemas match the record converters", () => {
       waterAmount: 300,
       coffeeAmount: 18,
       timeSeconds: 180,
+      brewerRef: ROASTER_URI,
+      recipeRef: ROASTER_URI,
     });
     expect(full.success).toBe(true);
   });

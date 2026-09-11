@@ -2,9 +2,11 @@ import { is, safeParse } from "@atcute/lexicons";
 import {
   SocialArabicaAlphaBean,
   SocialArabicaAlphaBrew,
+  SocialArabicaAlphaRecipe,
   SocialArabicaAlphaRoaster,
   BEAN_COLLECTION,
   BREW_COLLECTION,
+  RECIPE_COLLECTION,
   ROASTER_COLLECTION,
 } from "../generated/lexicons.js";
 import { toBeanRecord, AddBeanInput, BeanEditInput } from "../records/bean.js";
@@ -12,6 +14,7 @@ import { toBrewRecord, BrewInput, BrewEditInput } from "../records/brew.js";
 import {
   ownedBeanUri,
   ownedBrewUri,
+  ownedRecordUri,
   ownedRoasterUri,
 } from "../records/validation.js";
 import type { PdsClient } from "../pds/repository.js";
@@ -184,9 +187,77 @@ export async function logBrew(
       "roaster_required",
       "The selected bean has no roaster. Ask the user which roaster applies, list roasters if needed, attach it with arabica_edit_bean, then retry this brew.",
     );
+  let brewInput = input;
+  if (input.recipeRef) {
+    let recipeRef;
+    try {
+      recipeRef = ownedRecordUri(
+        input.recipeRef,
+        s.did,
+        RECIPE_COLLECTION,
+        "recipeRef",
+        "recipe",
+      );
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "Invalid recipe reference";
+      throw new ToolFailure(
+        message.includes("not owned") ? "record_not_owned" : "invalid_input",
+        message,
+      );
+    }
+    let recipe;
+    try {
+      recipe = await deps
+        .pds(s)
+        .getRecord(RECIPE_COLLECTION, recipeRef.rkey, signal);
+    } catch (e: any) {
+      if (e?.kind === "not_found")
+        throw new ToolFailure(
+          "record_not_found",
+          "The selected recipe record was not found.",
+        );
+      throw mapError(e);
+    }
+    const checked = safeParse(
+      SocialArabicaAlphaRecipe.mainSchema,
+      recipe.value,
+    );
+    if (!checked.ok)
+      throw new ToolFailure(
+        "invalid_record",
+        "The selected recipe record is malformed.",
+      );
+    const defaults: Partial<BrewInput> = {
+      coffeeAmount:
+        checked.value.coffeeAmount && checked.value.coffeeAmount > 0
+          ? Math.round(checked.value.coffeeAmount / 10)
+          : undefined,
+      waterAmount:
+        checked.value.waterAmount && checked.value.waterAmount > 0
+          ? Math.round(checked.value.waterAmount / 10)
+          : undefined,
+      pours: checked.value.pours?.map((pour) => ({ ...pour })),
+      brewerRef: checked.value.brewerRef,
+    };
+    brewInput = {
+      ...input,
+      coffeeAmount:
+        input.coffeeAmount === undefined
+          ? defaults.coffeeAmount
+          : input.coffeeAmount,
+      waterAmount:
+        input.waterAmount === undefined
+          ? defaults.waterAmount
+          : input.waterAmount,
+      pours: input.pours === undefined ? defaults.pours : input.pours,
+      brewerRef:
+        input.brewerRef === undefined ? defaults.brewerRef : input.brewerRef,
+    };
+  }
   let record;
   try {
-    record = toBrewRecord(input);
+    record = toBrewRecord(brewInput);
   } catch (e) {
     throw e instanceof Error ? new ToolFailure("invalid_input", e.message) : e;
   }

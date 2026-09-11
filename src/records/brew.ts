@@ -23,6 +23,8 @@ export type BrewInput = {
   timeSeconds?: number | null;
   grindSize?: string | null;
   grinderRef?: string | null;
+  brewerRef?: string | null;
+  recipeRef?: string | null;
   tastingNotes?: string | null;
   rating?: number | null;
   pours?: Array<{ waterAmount: number; timeSeconds: number }> | null;
@@ -74,9 +76,10 @@ export function toBrewRecord(input: BrewInput): BrewRecord {
       if (out !== undefined) r[k] = out;
     }
   }
-  if (input.grinderRef === null) delete r.grinderRef;
-  else if (input.grinderRef !== undefined)
-    r.grinderRef = atUri(input.grinderRef, "grinderRef");
+  for (const k of ["grinderRef", "brewerRef", "recipeRef"] as const) {
+    if (input[k] === null) delete r[k];
+    else if (input[k] !== undefined) r[k] = atUri(input[k], k);
+  }
   for (const [k] of Object.entries({
     coffeeAmount: 0,
     waterAmount: 0,

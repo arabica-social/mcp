@@ -24,11 +24,15 @@ describe("record adapters", () => {
       requestId: "r",
       beanUri: "at://did:plc:abc/social.arabica.alpha.bean/3jzfcijpj2z2a",
       temperature: 93.5,
+      brewerRef: "at://did:plc:abc/social.arabica.alpha.brewer/3jzfcijpj2z2a",
+      recipeRef: "at://did:plc:abc/social.arabica.alpha.recipe/3jzfcijpj2z2a",
       espresso: { yieldWeight: 36, pressure: 9 },
       pourover: { bloomWater: 40 },
     });
     expect(x).toMatchObject({
       temperature: 935,
+      brewerRef: "at://did:plc:abc/social.arabica.alpha.brewer/3jzfcijpj2z2a",
+      recipeRef: "at://did:plc:abc/social.arabica.alpha.recipe/3jzfcijpj2z2a",
       espressoParams: { yieldWeight: 360, pressure: 90 },
       pouroverParams: { bloomWater: 40 },
     });
