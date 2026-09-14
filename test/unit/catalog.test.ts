@@ -15,6 +15,7 @@ import {
 import { IdempotencyStore } from "../../src/state/idempotency.js";
 import {
   BREW_COLLECTION,
+  BREWER_COLLECTION,
   RECIPE_COLLECTION,
 } from "../../src/generated/lexicons.js";
 import { editBrew, logBrew, type Deps } from "../../src/tools/operations.js";
@@ -299,15 +300,22 @@ describe("editBrew clears optional params", () => {
           value:
             collection === BREW_COLLECTION
               ? currentBrew
-              : {
-                  $type: RECIPE_COLLECTION,
-                  name: "V60",
-                  brewerRef: brewerURI,
-                  coffeeAmount: 185,
-                  waterAmount: 3000,
-                  pours: [{ waterAmount: 300, timeSeconds: 180 }],
-                  createdAt: new Date().toISOString(),
-                },
+              : collection === BREWER_COLLECTION
+                ? {
+                    $type: "social.arabica.alpha.brewer",
+                    name: "V60",
+                    brewerType: "Pour Over",
+                    createdAt: new Date().toISOString(),
+                  }
+                : {
+                    $type: RECIPE_COLLECTION,
+                    name: "V60",
+                    brewerRef: brewerURI,
+                    coffeeAmount: 185,
+                    waterAmount: 3000,
+                    pours: [{ waterAmount: 300, timeSeconds: 180 }],
+                    createdAt: new Date().toISOString(),
+                  },
         }),
         createRecord: async () => {
           throw new Error("unexpected");
@@ -341,6 +349,7 @@ describe("editBrew clears optional params", () => {
       coffeeAmount: 20,
       waterAmount: 300,
       pours: [{ waterAmount: 300, timeSeconds: 180 }],
+      pouroverParams: { bloomWater: 300, bloomSeconds: 180 },
     });
 
     await editBrew(

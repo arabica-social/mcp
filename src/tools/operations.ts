@@ -2,9 +2,11 @@ import { is, safeParse } from "@atcute/lexicons";
 import {
   SocialArabicaAlphaBean,
   SocialArabicaAlphaBrew,
+  SocialArabicaAlphaBrewer,
   SocialArabicaAlphaRecipe,
   SocialArabicaAlphaRoaster,
   BEAN_COLLECTION,
+  BREWER_COLLECTION,
   BREW_COLLECTION,
   RECIPE_COLLECTION,
   ROASTER_COLLECTION,
@@ -40,8 +42,16 @@ async function session(deps: Deps) {
 
 type BrewRecipeDefaults = Pick<
   BrewInput,
-  "coffeeAmount" | "waterAmount" | "pours" | "brewerRef"
+  "coffeeAmount" | "waterAmount" | "pours" | "brewerRef" | "pourover"
 >;
+
+/** Brewer type strings that count as pour-over, like the frontend's normalizeBrewerCategory. */
+const POUROVER_BREWER_TYPES = new Set([
+  "pourover",
+  "pour-over",
+  "pour over",
+  "dripper",
+]);
 
 async function resolveRecipeDefaults(
   recipeValue: string,
@@ -84,6 +94,46 @@ async function resolveRecipeDefaults(
       "invalid_record",
       "The selected recipe record is malformed.",
     );
+  // Bloom derivation is best-effort: when the recipe has no brewerType, fall
+  // back to the referenced brewer's type like the frontend; a missing or
+  // malformed brewer record just skips the bloom.
+  let brewerType = checked.value.brewerType;
+  if (!brewerType && checked.value.brewerRef) {
+    try {
+      const brewerRef = ownedRecordUri(
+        checked.value.brewerRef,
+        s.did,
+        BREWER_COLLECTION,
+        "brewerRef",
+        "brewer",
+      );
+      const brewer = await deps
+        .pds(s)
+        .getRecord(BREWER_COLLECTION, brewerRef.rkey, signal);
+      const parsed = safeParse(
+        SocialArabicaAlphaBrewer.mainSchema,
+        brewer.value,
+      );
+      if (parsed.ok) brewerType = parsed.value.brewerType;
+    } catch {}
+  }
+  // For pour-over recipes the first pour seeds the bloom: its water becomes
+  // bloomWater and its time becomes bloomSeconds.
+  const firstPour = checked.value.pours?.[0];
+  const pourover =
+    brewerType &&
+    POUROVER_BREWER_TYPES.has(brewerType.toLowerCase().trim()) &&
+    firstPour &&
+    (firstPour.waterAmount > 0 || firstPour.timeSeconds > 0)
+      ? {
+          ...(firstPour.waterAmount > 0
+            ? { bloomWater: firstPour.waterAmount }
+            : {}),
+          ...(firstPour.timeSeconds > 0
+            ? { bloomSeconds: firstPour.timeSeconds }
+            : {}),
+        }
+      : undefined;
   return {
     coffeeAmount:
       checked.value.coffeeAmount && checked.value.coffeeAmount > 0
@@ -95,6 +145,7 @@ async function resolveRecipeDefaults(
         : undefined,
     pours: checked.value.pours?.map((pour) => ({ ...pour })),
     brewerRef: checked.value.brewerRef,
+    pourover,
   };
 }
 
@@ -268,6 +319,8 @@ export async function logBrew(
       pours: input.pours === undefined ? defaults.pours : input.pours,
       brewerRef:
         input.brewerRef === undefined ? defaults.brewerRef : input.brewerRef,
+      pourover:
+        input.pourover === undefined ? defaults.pourover : input.pourover,
     };
   }
   let record;
@@ -353,6 +406,7 @@ export async function editBrew(
       "waterAmount",
       "pours",
       "brewerRef",
+      "pourover",
     ] as const) {
       if (
         !Object.prototype.hasOwnProperty.call(input, key) &&
@@ -392,6 +446,9 @@ export async function editBrew(
     "pours",
     "brewerRef",
   ]);
+  // Only a recipe that actually derives a bloom owns pouroverParams; a
+  // non-pour-over recipe leaves the brew's pourover params untouched.
+  if (recipeDefaults?.pourover) recipeFields.add("pourover");
   for (const [inputKey, recordKey] of fields) {
     const supplied = Object.prototype.hasOwnProperty.call(input, inputKey);
     if (supplied || (rebaseRecipe && recipeFields.has(inputKey))) {
