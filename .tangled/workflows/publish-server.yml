@@ -1,0 +1,14 @@
+when:
+  - event: ["manual"]
+    branch: main
+
+engine: nixery
+
+dependencies:
+  nixpkgs:
+    - uv
+    - python312
+
+steps:
+  - name: publish MCP Atlas record from the arabica.social identity
+    command: uv run python scripts/publish_server.py server-record.json

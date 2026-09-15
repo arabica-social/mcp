@@ -1,6 +1,6 @@
 # Arabica MCP
 
-`@arabica/mcp` is a local, personal-use MCP server. It writes Arabica coffee records directly to the authenticated AT Protocol PDS. It does not use the Arabica web app or private APIs.
+`@arabica-social/mcp` is a local, personal-use MCP server. It writes Arabica coffee records directly to the authenticated AT Protocol PDS. It does not use the Arabica web app or private APIs.
 
 ## Install and Configure
 

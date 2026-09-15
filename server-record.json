@@ -1,0 +1,114 @@
+{
+  "$type": "tech.waow.mcp.server",
+  "name": "arabica-mcp",
+  "description": "Manage your arabica.social coffee data from an MCP client. List, create, and edit beans, brews, roasters, grinders, brewers, recipes, comments, and likes directly on your authenticated AT Protocol PDS.",
+  "transport": "stdio",
+  "repo": "https://tangled.org/arabica.social/mcp",
+  "language": "typescript",
+  "framework": "mcp-sdk",
+  "tools": [
+    {
+      "name": "arabica_list_beans",
+      "description": "List coffee beans owned by the authenticated user."
+    },
+    {
+      "name": "arabica_add_bean",
+      "description": "Create a coffee bean in the authenticated user's PDS."
+    },
+    {
+      "name": "arabica_edit_bean",
+      "description": "Update an existing coffee bean."
+    },
+    {
+      "name": "arabica_list_brews",
+      "description": "List coffee brews owned by the authenticated user."
+    },
+    {
+      "name": "arabica_log_brew",
+      "description": "Log a coffee brew for one of the authenticated user's beans."
+    },
+    {
+      "name": "arabica_edit_brew",
+      "description": "Update an existing coffee brew."
+    },
+    {
+      "name": "arabica_list_roasters",
+      "description": "List roasters owned by the authenticated user."
+    },
+    {
+      "name": "arabica_create_roaster",
+      "description": "Create a coffee roaster record."
+    },
+    {
+      "name": "arabica_edit_roaster",
+      "description": "Update an existing coffee roaster."
+    },
+    {
+      "name": "arabica_list_grinders",
+      "description": "List grinders owned by the authenticated user."
+    },
+    {
+      "name": "arabica_create_grinder",
+      "description": "Create a coffee grinder record."
+    },
+    {
+      "name": "arabica_edit_grinder",
+      "description": "Update an existing coffee grinder."
+    },
+    {
+      "name": "arabica_list_brewers",
+      "description": "List brewers owned by the authenticated user."
+    },
+    {
+      "name": "arabica_create_brewer",
+      "description": "Create a coffee brewer record."
+    },
+    {
+      "name": "arabica_edit_brewer",
+      "description": "Update an existing coffee brewer."
+    },
+    {
+      "name": "arabica_list_recipes",
+      "description": "List coffee recipes owned by the authenticated user."
+    },
+    {
+      "name": "arabica_create_recipe",
+      "description": "Create a coffee recipe record."
+    },
+    {
+      "name": "arabica_edit_recipe",
+      "description": "Update an existing coffee recipe."
+    },
+    {
+      "name": "arabica_list_comments",
+      "description": "List comments owned by the authenticated user."
+    },
+    {
+      "name": "arabica_create_comment",
+      "description": "Create a comment on an Arabica record."
+    },
+    {
+      "name": "arabica_edit_comment",
+      "description": "Update an existing comment."
+    },
+    {
+      "name": "arabica_list_likes",
+      "description": "List likes owned by the authenticated user."
+    },
+    {
+      "name": "arabica_create_like",
+      "description": "Create a like on an Arabica record."
+    },
+    {
+      "name": "arabica_edit_like",
+      "description": "Update an existing like."
+    }
+  ],
+  "packages": [
+    {
+      "registry": "npm",
+      "identifier": "@arabica-social/mcp"
+    }
+  ],
+  "createdAt": "2026-09-15T00:38:37Z"
+}
