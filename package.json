@@ -1,6 +1,6 @@
 {
   "name": "@arabica-social/mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local MCP server for interacting with arabica.social records",
   "type": "module",
   "bin": {
